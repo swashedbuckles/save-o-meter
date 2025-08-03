@@ -19,7 +19,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -165,12 +168,154 @@ fun ThermometerDisplay(
 }
 
 @Composable
+fun GoalEditDialog(
+    currentGoalName: String,
+    currentGoalAmount: Float,
+    onDismiss: () -> Unit,
+    onSave: (String, Float) -> Unit
+) {
+    var goalName by remember { mutableStateOf((currentGoalName))}
+    var goalAmount by remember { mutableStateOf(currentGoalAmount.toString())}
+
+    val isValidName = goalName.trim().isNotEmpty()
+    val isValidAmount = goalAmount.toFloatOrNull()?. let { it > 0 } == true
+    val canSave = isValidName && isValidAmount
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Edit Savings Goal",
+                style = MaterialTheme.typography.headlineSmall
+            )
+        },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                OutlinedTextField(
+                    value = goalName,
+                    onValueChange = { goalName = it },
+                    label = { Text("Goal Name") },
+                    placeholder = { Text("e.g., Vacation Fund") },
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = !isValidName && goalName.isNotBlank(),
+                    supportingText = if (!isValidName && goalName.isNotBlank()) {
+                        { Text("Goal name cannot be empty") }
+                    } else null
+                )
+
+                // Goal amount input
+                OutlinedTextField(
+                    value = goalAmount,
+                    onValueChange = { goalAmount = it },
+                    label = { Text("Goal Amount") },
+                    placeholder = { Text("500") },
+                    prefix = { Text("$") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = !isValidAmount && goalAmount.isNotBlank(),
+                    supportingText = if (!isValidAmount && goalAmount.isNotBlank()) {
+                        { Text("Amount must be greater than 0") }
+                    } else null
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val amount = goalAmount.toFloat()
+                    onSave(goalName.trim(), amount)
+                },
+                enabled = canSave
+            ) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {}
+            Text("Cancel")
+        }
+    )
+}
+
+@Composable
+fun ResetConfirmationDialog(
+    onDismiss: () -> Unit,
+    onResetSavings: () -> Unit,
+    onResetAll: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Reset Data",
+                style = MaterialTheme.typography.headlineSmall
+            )
+        },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "What would you like to reset?",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    text = "• Reset Savings: Clear progress but keep your goal",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "• Reset Everything: Clear all data and return to defaults",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        confirmButton = {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                TextButton(
+                    onClick = {
+                        onResetSavings()
+                        onDismiss()
+                    }
+                ) {
+                    Text("Reset Savings")
+                }
+                TextButton(
+                    onClick = {
+                        onResetAll()
+                        onDismiss()
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Reset All")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+@Composable
 fun SavingsThermometerScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val dataManager = remember { SavingsDataManager(context) }
     val viewModel: SavingsViewModel = viewModel { SavingsViewModel(dataManager) }
 
     var inputAmount by remember { mutableStateOf("") }
+
+    var showGoalEditDialog by remember { mutableStateOf(false)}
+    var showResetDialog by remember { mutableStateOf(false)}
+
 
     val progress = if(viewModel.currentSavingsGoal > 0) viewModel.currentSavings / viewModel.currentSavingsGoal else 0f
     val isGoalReached = progress >= 1f
@@ -201,6 +346,23 @@ fun SavingsThermometerScreen(modifier: Modifier = Modifier) {
                 modifier = Modifier.padding(16.dp),
                 horizontalAlignment = Alignment.Start
             ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = viewModel.goalName,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextButton(
+                        onClick = { showGoalEditDialog = true }
+                    ) {
+                        Text("Edit")
+                    }
+                }
                 Text(
                     text = "Goal $${viewModel.currentSavingsGoal.toInt()}",
                     style = MaterialTheme.typography.titleMedium,
@@ -211,11 +373,24 @@ fun SavingsThermometerScreen(modifier: Modifier = Modifier) {
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
-                Text(
-                    text = "${(progress * 100).toInt()}% Complete",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = if (isGoalReached) Color.Red else MaterialTheme.colorScheme.onSurface
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "${(progress * 100).toInt()}% Complete",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = if (isGoalReached) Color.Red else MaterialTheme.colorScheme.onSurface
+                    )
+                    if (!isGoalReached) {
+                        Text(
+                            text = "$${viewModel.getRemainingAmount().toInt()} to go",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
         }
         Box(
@@ -229,6 +404,19 @@ fun SavingsThermometerScreen(modifier: Modifier = Modifier) {
         }
         Spacer(modifier = Modifier.weight(1f))
 
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+            horizontalArrangement = Arrangement.End
+        ) {
+            TextButton(
+                onClick = { showResetDialog = true }
+            ) {
+                Text(
+                    text="Reset Data",
+                    color=Color.Red
+                )
+            }
+        }
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -269,6 +457,25 @@ fun SavingsThermometerScreen(modifier: Modifier = Modifier) {
                 Text("Remove")
             }
         }
+    }
+    if (showGoalEditDialog) {
+        GoalEditDialog(
+            currentGoalName = viewModel.goalName,
+            currentGoalAmount = viewModel.currentSavingsGoal,
+            onDismiss = { showGoalEditDialog = false },
+            onSave = { name, amount ->
+                viewModel.updateGoal(amount, name)
+                showGoalEditDialog = false
+            }
+        )
+    }
+
+    if (showResetDialog) {
+        ResetConfirmationDialog(
+            onDismiss = { showResetDialog = false },
+            onResetSavings = { viewModel.resetSavingsProgress() },
+            onResetAll = { viewModel.resetAllData() }
+        )
     }
 }
 @Composable
