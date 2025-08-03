@@ -15,21 +15,27 @@ import kotlin.math.max
 import kotlin.math.min
 
 /**
- * Draws the thermometer visualization
+ * Draws the thermometer visualization using the full canvas size
  */
 private fun DrawScope.drawThermometer(
     progress: Float,
     isGoalReached: Boolean,
     bulbScale: Float
 ) {
-    val thermometerWidth = 40.dp.toPx()
-    val thermometerHeight = 250.dp.toPx()
-    val bulbRadius = 30.dp.toPx() * bulbScale
 
-    val thermometerLeft = (size.width - thermometerWidth) / 2
-    val thermometerTop = 20.dp.toPx()
-    val bulbCenterY = thermometerTop + thermometerHeight + bulbRadius - 10.dp.toPx()
-    val bulbCenterX = size.width / 2
+    val canvasWidth = size.width
+    val canvasHeight = size.height
+
+    // Calculate thermometer dimensions as percentages of canvas
+    val thermometerWidth = canvasWidth * 0.33f // 20% of canvas width
+    val bulbRadius = thermometerWidth * 0.75f // Bulb is 75% of thermometer width
+    val thermometerHeight = canvasHeight - (bulbRadius * 2) - (0.02f * canvasHeight)
+
+    // Center the thermometer horizontally
+    val thermometerLeft = (canvasWidth - thermometerWidth) / 2
+    val thermometerTop = canvasHeight * 0.05f // Start 5% from top
+    val bulbCenterY = thermometerTop + thermometerHeight + bulbRadius * 0.5f
+    val bulbCenterX = canvasWidth / 2
 
     // Draw thermometer outline
     drawRoundRect(
@@ -42,13 +48,13 @@ private fun DrawScope.drawThermometer(
     // Draw bulb outline
     drawCircle(
         color = Color.LightGray,
-        radius = bulbRadius,
+        radius = bulbRadius * bulbScale,
         center = Offset(bulbCenterX, bulbCenterY)
     )
 
     val fillHeight = thermometerHeight * progress
     val fillTop = thermometerTop + thermometerHeight - fillHeight
-    val innerPadding = 4.dp.toPx()
+    val innerPadding = thermometerWidth * 0.1f // 10% of width as padding
     val innerWidth = thermometerWidth - (innerPadding * 2)
     val innerLeft = thermometerLeft + innerPadding
 
@@ -74,7 +80,7 @@ private fun DrawScope.drawThermometer(
         }
 
         // Fill bulb
-        val innerBulbRadius = bulbRadius - innerPadding
+        val innerBulbRadius = bulbRadius * bulbScale - innerPadding
         drawCircle(
             color = mercuryColor,
             radius = innerBulbRadius,
@@ -82,95 +88,122 @@ private fun DrawScope.drawThermometer(
         )
     }
 
-    // Add thermometer tick marks
+    // Add thermometer tick marks (responsive sizing)
+    val tickLength = thermometerWidth * 0.3f
+    val tickOffset = thermometerWidth * 0.1f
+    val tickWidth = max(2f, thermometerWidth * 0.05f)
+
     for (i in 0..10) {
         val markHeight = thermometerTop + (thermometerHeight * i / 10)
-        drawLine(
-            color = Color.Gray,
-            start = Offset(thermometerLeft + thermometerWidth + 5.dp.toPx(), markHeight),
-            end = Offset(thermometerLeft + thermometerWidth + 15.dp.toPx(), markHeight),
-            strokeWidth = 2.dp.toPx(),
-            cap = StrokeCap.Round
-        )
+        if(i > 0 && i < 10) {
+            drawLine(
+                color = Color.Gray,
+                start = Offset(thermometerLeft + tickOffset, markHeight),
+                end = Offset(thermometerLeft  + tickOffset + tickLength, markHeight),
+                strokeWidth = tickWidth,
+                cap = StrokeCap.Round
+            )
+        }
     }
 
+    // Goal reached effects (responsive sizing)
     if (isGoalReached) {
         // Draw pulsing glow around bulb
         drawCircle(
-            color = Color(0xFFFFD700).copy(alpha = 0.3f), // Gold glow
-            radius = bulbRadius + 10.dp.toPx(),
+            color = Color(0xFFFFD700).copy(alpha = 0.3f),
+            radius = bulbRadius * bulbScale + thermometerWidth * 0.2f,
             center = Offset(bulbCenterX, bulbCenterY)
         )
 
         // Draw sparkles around thermometer
-        drawSparklesAroundThermometer(thermometerLeft, thermometerTop, thermometerWidth, thermometerHeight)
+        drawSparklesAroundThermometer(
+            thermometerLeft,
+            thermometerTop,
+            thermometerWidth,
+            thermometerHeight,
+            canvasWidth,
+            canvasHeight
+        )
     }
 }
 
 /**
- * Draw sparkles around the thermometer when goal is reached
+ * Draw sparkles around the thermometer (responsive positioning)
  */
 private fun DrawScope.drawSparklesAroundThermometer(
     thermometerLeft: Float,
     thermometerTop: Float,
     thermometerWidth: Float,
-    thermometerHeight: Float
+    thermometerHeight: Float,
+    canvasWidth: Float,
+    canvasHeight: Float
 ) {
+    val sparkleDistance = thermometerWidth * 0.8f
+    val sparkleSize = thermometerWidth * 0.15f
+
     val sparklePositions = listOf(
-        Offset(thermometerLeft - 20.dp.toPx(), thermometerTop + 50.dp.toPx()),
-        Offset(thermometerLeft + thermometerWidth + 20.dp.toPx(), thermometerTop + 80.dp.toPx()),
-        Offset(thermometerLeft - 15.dp.toPx(), thermometerTop + 150.dp.toPx()),
-        Offset(thermometerLeft + thermometerWidth + 25.dp.toPx(), thermometerTop + 180.dp.toPx()),
-        Offset(thermometerLeft - 10.dp.toPx(), thermometerTop + thermometerHeight - 50.dp.toPx()),
-        Offset(thermometerLeft + thermometerWidth + 15.dp.toPx(), thermometerTop + thermometerHeight - 20.dp.toPx())
+        Offset(thermometerLeft - sparkleDistance, thermometerTop + thermometerHeight * 0.2f),
+        Offset(thermometerLeft + thermometerWidth + sparkleDistance, thermometerTop + thermometerHeight * 0.3f),
+        Offset(thermometerLeft - sparkleDistance * 0.7f, thermometerTop + thermometerHeight * 0.6f),
+        Offset(thermometerLeft + thermometerWidth + sparkleDistance * 0.9f, thermometerTop + thermometerHeight * 0.7f),
+        Offset(thermometerLeft - sparkleDistance * 0.5f, thermometerTop + thermometerHeight * 0.9f),
+        Offset(thermometerLeft + thermometerWidth + sparkleDistance * 0.6f, thermometerTop + thermometerHeight * 0.95f)
     )
 
     sparklePositions.forEach { position ->
-        drawStar(
-            center = position,
-            color = Color(0xFFFFD700), // Gold
-            size = 8.dp.toPx()
-        )
+        // Only draw sparkles that are within canvas bounds
+        if (position.x > 0 && position.x < canvasWidth &&
+            position.y > 0 && position.y < canvasHeight) {
+            drawStar(
+                center = position,
+                color = Color(0xFFFFD700),
+                size = sparkleSize
+            )
+        }
     }
 }
 
 /**
- * Draw a simple star shape
+ * Draw a responsive star shape
  */
 private fun DrawScope.drawStar(center: Offset, color: Color, size: Float) {
+    val strokeWidth = max(2f, size * 0.2f)
+
     // Draw a simple 4-pointed star (plus sign rotated)
     drawLine(
         color = color,
         start = Offset(center.x - size, center.y),
         end = Offset(center.x + size, center.y),
-        strokeWidth = 3.dp.toPx(),
+        strokeWidth = strokeWidth,
         cap = StrokeCap.Round
     )
     drawLine(
         color = color,
         start = Offset(center.x, center.y - size),
         end = Offset(center.x, center.y + size),
-        strokeWidth = 3.dp.toPx(),
+        strokeWidth = strokeWidth,
         cap = StrokeCap.Round
     )
 
     // Add diagonal lines for 8-pointed star
     val diagonal = size * 0.7f
+    val diagonalStroke = strokeWidth * 0.7f
     drawLine(
         color = color,
         start = Offset(center.x - diagonal, center.y - diagonal),
         end = Offset(center.x + diagonal, center.y + diagonal),
-        strokeWidth = 2.dp.toPx(),
+        strokeWidth = diagonalStroke,
         cap = StrokeCap.Round
     )
     drawLine(
         color = color,
         start = Offset(center.x - diagonal, center.y + diagonal),
         end = Offset(center.x + diagonal, center.y - diagonal),
-        strokeWidth = 2.dp.toPx(),
+        strokeWidth = diagonalStroke,
         cap = StrokeCap.Round
     )
 }
+
 
 /**
  * Displays the thermometer visualization
@@ -181,7 +214,7 @@ fun ThermometerDisplay(
     isGoalReached: Boolean,
     modifier: Modifier = Modifier
 ) {
-    Canvas(modifier = modifier.size(width = 120.dp, height = 350.dp)) {
-        drawThermometer(progress, isGoalReached, bulbScale = 1f)
+    Canvas(modifier = modifier) {
+        drawThermometer(progress, isGoalReached, bulbScale = 1.25f)
     }
 }
