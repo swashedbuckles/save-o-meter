@@ -4,6 +4,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.core.EaseOutCubic
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,11 +40,14 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+
 import com.example.save_o_meter.ui.theme.SaveoMeterTheme
 import java.util.UUID
 import kotlin.math.max
@@ -160,12 +166,20 @@ fun ThermometerDisplay(
 
 @Composable
 fun SavingsThermometerScreen(modifier: Modifier = Modifier) {
-    var currentSavings by remember { mutableFloatStateOf(0f) }
-    var currentSavingsGoal by remember { mutableFloatStateOf(500f) }
+    val context = LocalContext.current
+    val dataManager = remember { SavingsDataManager(context) }
+    val viewModel: SavingsViewModel = viewModel { SavingsViewModel(dataManager) }
+
     var inputAmount by remember { mutableStateOf("") }
 
-    val progress = if (currentSavingsGoal > 0) currentSavings / currentSavingsGoal else 0f
+    val progress = if(viewModel.currentSavingsGoal > 0) viewModel.currentSavings / viewModel.currentSavingsGoal else 0f
     val isGoalReached = progress >= 1f
+
+    val animatedProgress by animateFloatAsState(
+        targetValue = min(progress, 1f),
+        animationSpec = tween(durationMillis = 1000, easing = EaseOutCubic),
+        label = "progress_animation"
+    )
 
     Column(
         modifier = modifier.fillMaxSize().padding(16.dp),
@@ -188,12 +202,12 @@ fun SavingsThermometerScreen(modifier: Modifier = Modifier) {
                 horizontalAlignment = Alignment.Start
             ) {
                 Text(
-                    text = "Goal $${currentSavingsGoal.toInt()}",
+                    text = "Goal $${viewModel.currentSavingsGoal.toInt()}",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = "Saved: $${currentSavings.toInt()}",
+                    text = "Saved: $${viewModel.currentSavings.toInt()}",
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -209,7 +223,7 @@ fun SavingsThermometerScreen(modifier: Modifier = Modifier) {
             contentAlignment = Alignment.Center
         ) {
             ThermometerDisplay(
-                progress = progress,
+                progress = animatedProgress,
                 isGoalReached = isGoalReached
             )
         }
@@ -233,7 +247,7 @@ fun SavingsThermometerScreen(modifier: Modifier = Modifier) {
                 onClick = {
                     val amount = inputAmount.toFloatOrNull()
                     if(amount != null && amount > 0) {
-                        currentSavings += amount
+                       viewModel.addSavings(amount)
                         inputAmount = ""
                     }
                 },
@@ -246,10 +260,7 @@ fun SavingsThermometerScreen(modifier: Modifier = Modifier) {
                 onClick = {
                     val amount = inputAmount.toFloatOrNull()
                     if(amount != null && amount > 0) {
-                        currentSavings -= amount
-                        if(currentSavings < 0) {
-                            currentSavings = 0f
-                        }
+                        viewModel.removeSavings(amount)
                         inputAmount = ""
                     }
                 },
