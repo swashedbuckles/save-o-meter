@@ -15,10 +15,17 @@ class SavingsViewModel(private val dataManager: SavingsDataManager) : ViewModel(
     var goalName by mutableStateOf(dataManager.getGoalName())
         private set
 
+    var showCelebration by mutableStateOf(false)
+        private set
+
+    private var wasGoalReached = false
     fun addSavings(amount: Float) {
         if(amount > 0) {
+            val previousSavings = currentSavings
             currentSavings += amount
             dataManager.saveCurrentSavings(currentSavings)
+
+            checkForGoalCelebration(previousSavings)
         }
     }
 
@@ -56,6 +63,8 @@ class SavingsViewModel(private val dataManager: SavingsDataManager) : ViewModel(
     fun resetSavingsProgress() {
         currentSavings = 0f
         dataManager.resetCurrentSavings()
+        wasGoalReached = false
+        showCelebration = false
     }
 
     fun resetAllData() {
@@ -63,6 +72,8 @@ class SavingsViewModel(private val dataManager: SavingsDataManager) : ViewModel(
         currentSavingsGoal = 500f
         goalName = "My Savings Goal"
         dataManager.resetAllData()
+        wasGoalReached = false
+        showCelebration = false
     }
 
     fun isGoalReached(): Boolean {
@@ -80,4 +91,19 @@ class SavingsViewModel(private val dataManager: SavingsDataManager) : ViewModel(
     fun getRemainingAmount(): Float {
         return maxOf(0f, currentSavingsGoal - currentSavings)
     }
+
+    private fun checkForGoalCelebration(previousAmount: Float) {
+        val goalReached = currentSavingsGoal > 0 && currentSavings >= currentSavingsGoal
+        val justReachedGoal = goalReached && previousAmount < currentSavingsGoal
+
+        if (justReachedGoal && !wasGoalReached) {
+            showCelebration = true
+            wasGoalReached = true
+        }
+    }
+
+    fun hideCelebration() {
+        showCelebration = false
+    }
+
 }

@@ -82,6 +82,7 @@ fun SavingsThermometerScreen(modifier: Modifier = Modifier) {
         label = "progress_animation"
     )
 
+    Box(modifier = modifier.fillMaxSize())
     Column(
         modifier = modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -136,6 +137,14 @@ fun SavingsThermometerScreen(modifier: Modifier = Modifier) {
                 viewModel.removeSavings(amount)
                 inputAmount = ""
             }
+        )
+    }
+
+    if (viewModel.showCelebration) {
+        CelebrationAnimation(
+            isVisible = true,
+            modifier = Modifier.fillMaxSize(),
+            onAnimationComplete = { viewModel.hideCelebration() }
         )
     }
 

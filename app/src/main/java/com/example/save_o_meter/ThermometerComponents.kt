@@ -95,8 +95,81 @@ private fun DrawScope.drawThermometer(
     }
 
     if (isGoalReached) {
-        // Future: Could add celebration effects here
+        // Draw pulsing glow around bulb
+        drawCircle(
+            color = Color(0xFFFFD700).copy(alpha = 0.3f), // Gold glow
+            radius = bulbRadius + 10.dp.toPx(),
+            center = Offset(bulbCenterX, bulbCenterY)
+        )
+
+        // Draw sparkles around thermometer
+        drawSparklesAroundThermometer(thermometerLeft, thermometerTop, thermometerWidth, thermometerHeight)
     }
+}
+
+/**
+ * Draw sparkles around the thermometer when goal is reached
+ */
+private fun DrawScope.drawSparklesAroundThermometer(
+    thermometerLeft: Float,
+    thermometerTop: Float,
+    thermometerWidth: Float,
+    thermometerHeight: Float
+) {
+    val sparklePositions = listOf(
+        Offset(thermometerLeft - 20.dp.toPx(), thermometerTop + 50.dp.toPx()),
+        Offset(thermometerLeft + thermometerWidth + 20.dp.toPx(), thermometerTop + 80.dp.toPx()),
+        Offset(thermometerLeft - 15.dp.toPx(), thermometerTop + 150.dp.toPx()),
+        Offset(thermometerLeft + thermometerWidth + 25.dp.toPx(), thermometerTop + 180.dp.toPx()),
+        Offset(thermometerLeft - 10.dp.toPx(), thermometerTop + thermometerHeight - 50.dp.toPx()),
+        Offset(thermometerLeft + thermometerWidth + 15.dp.toPx(), thermometerTop + thermometerHeight - 20.dp.toPx())
+    )
+
+    sparklePositions.forEach { position ->
+        drawStar(
+            center = position,
+            color = Color(0xFFFFD700), // Gold
+            size = 8.dp.toPx()
+        )
+    }
+}
+
+/**
+ * Draw a simple star shape
+ */
+private fun DrawScope.drawStar(center: Offset, color: Color, size: Float) {
+    // Draw a simple 4-pointed star (plus sign rotated)
+    drawLine(
+        color = color,
+        start = Offset(center.x - size, center.y),
+        end = Offset(center.x + size, center.y),
+        strokeWidth = 3.dp.toPx(),
+        cap = StrokeCap.Round
+    )
+    drawLine(
+        color = color,
+        start = Offset(center.x, center.y - size),
+        end = Offset(center.x, center.y + size),
+        strokeWidth = 3.dp.toPx(),
+        cap = StrokeCap.Round
+    )
+
+    // Add diagonal lines for 8-pointed star
+    val diagonal = size * 0.7f
+    drawLine(
+        color = color,
+        start = Offset(center.x - diagonal, center.y - diagonal),
+        end = Offset(center.x + diagonal, center.y + diagonal),
+        strokeWidth = 2.dp.toPx(),
+        cap = StrokeCap.Round
+    )
+    drawLine(
+        color = color,
+        start = Offset(center.x - diagonal, center.y + diagonal),
+        end = Offset(center.x + diagonal, center.y - diagonal),
+        strokeWidth = 2.dp.toPx(),
+        cap = StrokeCap.Round
+    )
 }
 
 /**
