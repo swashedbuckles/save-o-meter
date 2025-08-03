@@ -161,7 +161,7 @@ fun ThermometerDisplay(
 @Composable
 fun SavingsThermometerScreen(modifier: Modifier = Modifier) {
     var currentSavings by remember { mutableFloatStateOf(0f) }
-    var currentSavingsGoal by remember { mutableFloatStateOf(0f) }
+    var currentSavingsGoal by remember { mutableFloatStateOf(500f) }
     var inputAmount by remember { mutableStateOf("") }
 
     val progress = if (currentSavingsGoal > 0) currentSavings / currentSavingsGoal else 0f
@@ -209,7 +209,7 @@ fun SavingsThermometerScreen(modifier: Modifier = Modifier) {
             contentAlignment = Alignment.Center
         ) {
             ThermometerDisplay(
-                progress = 1.0f,
+                progress = progress,
                 isGoalReached = isGoalReached
             )
         }
